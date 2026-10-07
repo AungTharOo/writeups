@@ -1,0 +1,40 @@
+# 1. Extract bits (always the same)
+zsteg -E b1,rgb,lsb,yx challenge.png > extracted.bin
+
+# 2. Convert whole thing to bit string
+xxd -b -c 1 extracted.bin | awk '{print $2}' | tr -d '\n' > bits.txt
+
+# 3. Search for the markers (this finds the real data no matter the offset)
+grep -o '001111000100110001001001010011100100010100111110.*001111000101000001001100010000010100100101001110' bits.txt > payload.txt
+
+# 4. Remove the markers and keep only the middle data
+LEN=$(wc -c < payload.txt)
+cut -c 49-$((LEN-56)) payload.txt > matrix_bits.txt
+
+# 5. Check how many bits you got
+BITS=$(wc -c < matrix_bits.txt)
+echo "Bits: $BITS"
+
+# Fix the extra bit first
+head -c 1369 matrix_bits.txt > matrix_bits.txt.tmp
+mv matrix_bits.txt.tmp matrix_bits.txt
+
+# Calculate size without bc (manual way)
+BITS=$(wc -c < matrix_bits.txt)
+echo "Bits: $BITS"
+
+# For this challenge we already know it's 37
+SIZE=37
+echo "Matrix size: ${SIZE}x${SIZE}"
+
+# Make the QR
+(
+  echo "P1"
+  echo "$SIZE $SIZE"
+  head -c $((SIZE*SIZE)) matrix_bits.txt | fold -w1 | tr '\n' ' '
+) > qr.pbm
+
+convert qr.pbm -scale 800% qr.png
+zbarimg qr.png
+
+
