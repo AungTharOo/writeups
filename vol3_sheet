@@ -1,0 +1,8 @@
+vol -f mem.dmp windows.info
+vol -f mem.dmp windows.pslist            # vs psscan (hidden procs)
+vol -f mem.dmp windows.cmdline           # process args = flags often here
+vol -f mem.dmp windows.filescan | grep -iE "flag|secret|\.zip|\.kdbx"
+vol -f mem.dmp windows.dumpfiles --virtaddr 0xADDR
+vol -f mem.dmp windows.malfind           # injected code
+vol -f mem.dmp windows.hashdump          # SAM hashes → john/hashcat
+# OpenSSH plugin: OpenSSH-Session-Key-Recovery → decrypt captured traffic!
