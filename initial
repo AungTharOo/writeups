@@ -1,0 +1,19 @@
+| You got... | Run FIRST |
+|---|---|
+| **Any file** | `file X` → `xxd X \| head -50` → `strings -n 8 X \| grep -iE "flag\|csg\|key\|pass"` |
+| **.mem / raw RAM** | `vol -f mem.dump windows.info` → `pslist` → `cmdline` → `filescan \| grep -i flag` |
+| **.pcap / .pcapng** | `tshark -r f.pcap -q -z conv,tcp` → Wireshark `http.request` → `Export Objects` → `strings \| grep CSG_FLAG` |
+| **.png/.jpg/.bmp** | `zsteg -a f.png` · `stegseek f.jpg` · `binwalk -e` · `exiftool` · StegSolve bit planes |
+| **.zip** | `7z l` · encrypted? `john hash --wordlist=/usr/share/wordlists/rockyou.txt` or `bkcrack` (known plaintext) |
+| **.exe/.dll** | DIE (`die -e`) → `strings -el` (UTF-16!) → Ghidra → `capa f.exe` → `floss f.exe` |
+| **.pyc** | `pycdc f.pyc` → fallback `uncompyle6` · PyInstaller exe? `pyinstxtractor-ng` first |
+| **.apk** | `apktool d` + `jadx-gui` → grep strings/resources → `dex2jar` → Bytecode Viewer |
+| **.pdf** | `pdfid.py` → `pdf-parser.py` → `peepdf-3` → `qpdf --qdf --object-streams=disable f.pdf out.pdf` |
+| **Office (.docm/.xlsm)** | `olevba f` → `oleid` → `oledump.py -s a -v` |
+| **.E01/.dd/.img** | `ewfmount` / TSK `mmls` → `fls -o X` → `icat` · or Autopsy GUI |
+| **.evtx / logs** | `chainsaw hunt f.evtx -s sigma/ --mapping mapping-files/sigma-mapping.yml` · Hayabusa |
+| **Audio (.wav/.mp3)** | Spectrogram (Audacity/Sonic Visualiser) → `steghide` (wav) → SSTV: `sstv` → `multimon-ng -t wav -a AFSK1200` |
+| **.sqllite/.db** | `sqlite3 f.db` → `.tables` → hidden/deleted: strings + DB Browser |
+| **Windows disk/registry** | RegRipper · `reg.exe`-less: `python regipy` or `chntpw` style hives → NTUSER/SAM/SYSTEM |
+| **QR / barcode in image** | `zbarimg -q f.png` |
+
