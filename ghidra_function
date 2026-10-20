@@ -1,0 +1,88 @@
+#!/usr/bin/env jython
+# -*- coding: utf-8 -*-
+
+# Ghidra script: Extract all decompiled functions into a single file.
+# Prompts the user for save location and file name.
+# Compatible with Ghidra's Jython 2.7.
+
+import os
+from ghidra.app.decompiler import DecompInterface
+from ghidra.util.task import ConsoleTaskMonitor
+from ghidra.util import Msg
+from docking.widgets.filechooser import GhidraFileChooser, GhidraFileChooserMode
+from java.io import File
+
+# --- Step 1: Ask user where to save ---
+chooser = GhidraFileChooser(state.getTool().getActiveWindow())
+chooser.setTitle("Select output .txt file location")
+chooser.setFileSelectionMode(GhidraFileChooserMode.FILES_ONLY)
+chooser.setSelectedFile(File("decompiled_functions.txt"))
+output_file_obj = chooser.getSelectedFile()
+
+if not output_file_obj:
+    print("No file selected. Aborting.")
+    exit()
+
+output_path = output_file_obj.getAbsolutePath()
+
+# --- Step 2: Prepare decompiler ---
+iface = DecompInterface()
+iface.openProgram(currentProgram)
+
+monitor = ConsoleTaskMonitor()
+
+functions = list(currentProgram.getFunctionManager().getFunctions(True))
+
+written_count = 0
+failed_count = 0
+
+try:
+    with open(output_path, "w") as outf:
+        for idx, func in enumerate(functions, start=1):
+            try:
+                res = iface.decompileFunction(func, 60, monitor)
+                if res and res.getDecompiledFunction():
+                    code = res.getDecompiledFunction().getC()
+                    outf.write("// Function %s at %s\n" % (func.getName(), func.getEntryPoint()))
+                    outf.write(code)
+                    outf.write("\n\n")
+                    written_count += 1
+                    print("Appended function %d: %s" % (idx, func.getName()))
+                else:
+                    failed_count += 1
+            except Exception as e:
+                Msg.error(self, "Failed to decompile %s: %s" % (func.getName(), e))
+                failed_count += 1
+except Exception as e:
+    Msg.error(self, "Failed to write output file: %s" % e)
+    raise
+
+msg = "Export complete. Wrote %d functions. Failed: %d.\nFile: %s" % (
+    written_count, failed_count, output_path
+)
+
+# --- Step 3: Robust notification ---
+try:
+    popup(msg, "Done")
+except Exception:
+    try:
+        from java.lang import Runnable
+        from javax.swing import JOptionPane, SwingUtilities
+
+        class PopupRunnable(Runnable):
+            def __init__(self, m, t):
+                self.m = m
+                self.t = t
+            def run(self):
+                JOptionPane.showMessageDialog(None, self.m, self.t, JOptionPane.INFORMATION_MESSAGE)
+
+        try:
+            SwingUtilities.invokeAndWait(PopupRunnable(msg, "Done"))
+        except Exception:
+            SwingUtilities.invokeLater(PopupRunnable(msg, "Done"))
+
+    except Exception:
+        import traceback
+        print("GUI notification failed; falling back to console output.")
+        traceback.print_exc()
+        print(msg)
